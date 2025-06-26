@@ -1,0 +1,5 @@
+{
+  "name": "News Card",
+  "trigger_keywords": ["news", "headlines", "current events"],
+  "active": true
+}

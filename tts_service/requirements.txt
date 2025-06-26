@@ -1,0 +1,16 @@
+fastapi>=0.104.0
+uvicorn>=0.23.2
+httpx>=0.25.0
+pydantic>=2.4.2
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+numpy>=1.22.0
+torch>=2.0.0
+torchaudio>=2.0.0
+soundfile>=0.12.1
+safetensors>=0.3.1
+huggingface_hub>=0.16.4
+descript-audio-codec>=1.0.0
+edge-tts>=6.1.9
+gtts>=2.4.0
+pyttsx3>=2.90

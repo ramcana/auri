@@ -1,0 +1,5 @@
+{
+  "name": "File Convert Card",
+  "trigger_keywords": ["convert file", "pdf to docx", "image to text"],
+  "active": true
+}

@@ -1,0 +1,120 @@
+.message-row {
+  display: flex;
+  align-items: flex-end; /* Aligns avatar with the bottom of the bubble */
+  margin-bottom: 15px;
+  max-width: 75%; /* Bubbles don't take full width */
+}
+
+.message-row.user-row {
+  justify-content: flex-end; /* Aligns user messages to the right */
+  margin-left: auto; /* Pushes the row to the right */
+}
+
+.message-row.bot-row {
+  justify-content: flex-start; /* Aligns bot messages to the left */
+  margin-right: auto; /* Pushes the row to the left */
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #ccc; /* Placeholder background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1em;
+  margin: 0 10px;
+  flex-shrink: 0; /* Prevents avatar from shrinking */
+}
+
+.message-bubble {
+  padding: 10px 15px;
+  border-radius: 18px;
+  position: relative;
+  word-wrap: break-word; /* Ensures long words break and don't overflow */
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble.user-bubble {
+  background-color: #007bff; /* Blue for user */
+  color: white;
+  border-bottom-right-radius: 5px; /* Tail effect */
+}
+
+.message-bubble.bot-bubble {
+  background-color: #e9ecef; /* Light grey for bot */
+  color: #333;
+  border-bottom-left-radius: 5px; /* Tail effect */
+}
+
+.message-bubble.error-bubble {
+  background-color: #ffebee; /* Light red for errors */
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+}
+
+.message-bubble.has-audio {
+  padding-top: 8px;
+}
+
+.message-bubble.playing-audio {
+  border: 1px solid #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+}
+
+.message-text {
+  margin: 0;
+  white-space: pre-wrap; /* Preserves whitespace and newlines */
+}
+
+/* Audio controls styling */
+.audio-controls {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  align-self: flex-start;
+}
+
+.audio-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.audio-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.audio-button.play {
+  color: #2196f3;
+}
+
+.audio-button.stop {
+  color: #f44336;
+  animation: pulse 1s infinite;
+}
+
+/* Audio indicator */
+.audio-indicator {
+  font-size: 12px;
+  color: #4caf50;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  animation: pulse 1s infinite;
+}
+
+/* Pulsing animation for playing audio */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}

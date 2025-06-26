@@ -1,0 +1,131 @@
+
+> auri-app@1.0.0 dev
+> concurrently -k "npm run server" "npm run stt:server" "npm run llm:server" "npm run tts:server" "npm run vite" "npm run dev:electron"
+
+[0] 
+[0] > auri-app@1.0.0 server
+[0] > .\venv\Scripts\uvicorn backend.main:app --reload --port 8080
+[0] 
+[2] 
+[2] > auri-app@1.0.0 llm:server
+[2] > .\venv\Scripts\uvicorn backend.llm_service:app --reload --port 8002
+[2] 
+[1] 
+[1] > auri-app@1.0.0 stt:server
+[1] > .\venv\Scripts\uvicorn stt_service.app:app --reload --port 8001
+[1] 
+[3] 
+[3] > auri-app@1.0.0 tts:server
+[3] > .\venv\Scripts\uvicorn tts_service.app:app --reload --port 8003
+[3] 
+[4] 
+[4] > auri-app@1.0.0 vite
+[4] > vite
+[4] 
+[5] 
+[5] > auri-app@1.0.0 dev:electron
+[5] > wait-on http://localhost:5173 tcp:8080 tcp:8001 tcp:8002 tcp:8003 && electron .
+[5] 
+[0] INFO:     Will watch for changes in these directories: ['E:\\voice-bot-app']
+[0] INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+[0] INFO:     Started reloader process [32988] using WatchFiles
+[2] INFO:     Will watch for changes in these directories: ['E:\\voice-bot-app']
+[2] INFO:     Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
+[2] INFO:     Started reloader process [47268] using WatchFiles
+[1] INFO:     Will watch for changes in these directories: ['E:\\voice-bot-app']
+[1] INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+[1] INFO:     Started reloader process [8024] using WatchFiles
+[3] INFO:     Will watch for changes in these directories: ['E:\\voice-bot-app']
+[3] INFO:     Uvicorn running on http://127.0.0.1:8003 (Press CTRL+C to quit)
+[3] INFO:     Started reloader process [46704] using WatchFiles
+[4] 
+[4]   [32m[1mVITE[22m v4.5.14[39m  [2mready in [0m[1m410[22m[2m[0m ms[22m
+[4] 
+[4]   [32mΓ₧£[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://10.176.50.77:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://192.168.4.65:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://172.17.208.1:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://172.30.80.1:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://172.22.192.1:[1m5173[22m/[39m
+[4]   [32mΓ₧£[39m  [1mNetwork[22m: [36mhttp://192.168.128.1:[1m5173[22m/[39m
+[1] INFO:     Started server process [35928]
+[1] INFO:     Waiting for application startup.
+[1] INFO:     Application startup complete.
+[0] INFO:text_processor:Using TTS engine: edge (forced)
+[0] INFO:     Started server process [41308]
+[0] INFO:     Waiting for application startup.
+[0] INFO:     Application startup complete.
+[2] INFO:backend.conversation_manager:Sessions file not found: conversation_sessions.json
+[2] INFO:     Started server process [21668]
+[2] INFO:     Waiting for application startup.
+[2] INFO:     Application startup complete.
+[3] INFO:tts_service.app:Setting TTS_ENGINE to: edge (forced)
+[3] INFO:tts_service.app:Edge TTS is available and will be used as the primary engine.
+[3] INFO:     Started server process [47312]
+[3] INFO:     Waiting for application startup.
+[3] INFO:tts_service.app:Starting TTS service with engine: edge (forced to Edge TTS)
+[3] INFO:tts_service.app:edge-tts package found and will be used as primary TTS engine
+[3] INFO:tts_service.app:gTTS package found (fallback available)
+[3] INFO:tts_service.app:pyttsx3 package found (fallback TTS available)
+[3] INFO:tts_service.app:TTS service started successfully
+[3] INFO:     Application startup complete.
+[0] INFO:websocket_handler:ΓÜ¬ New WebSocket connection attempt from client 2298411039056
+[0] INFO:     127.0.0.1:6965 - "WebSocket /ws" [accepted]
+[0] INFO:websocket_handler:≡ƒƒó WebSocket connection accepted for client 2298411039056
+[0] INFO:     connection open
+[0] INFO:websocket_handler:≡ƒƒó Client 2298411039056 added to active connections. Total: 1
+[0] INFO:websocket_handler:≡ƒö┤ Client 2298411039056 disconnected
+[0] INFO:websocket_handler:≡ƒö┤ Removed client 2298411039056 from active connections. Total: 0
+[0] INFO:     connection closed
+[0] INFO:websocket_handler:ΓÜ¬ New WebSocket connection attempt from client 2298411086288
+[0] INFO:     127.0.0.1:7059 - "WebSocket /ws" [accepted]
+[0] INFO:websocket_handler:≡ƒƒó WebSocket connection accepted for client 2298411086288
+[0] INFO:     connection open
+[0] INFO:websocket_handler:≡ƒƒó Client 2298411086288 added to active connections. Total: 1
+[0] INFO:websocket_handler:≡ƒô¥ Processing text: Hi whos the preseident of usa
+[0] INFO:text_processor:Processing text message: Hi whos the preseident of usa
+[0] INFO:text_processor:Sending text to LLM service: Hi whos the preseident of usa
+[0] INFO:text_processor:Using Ollama model: mistral:7b-instruct with chat endpoint
+[0] INFO:httpx:HTTP Request: POST http://localhost:11434/api/chat "HTTP/1.1 200 OK"
+[0] INFO:text_processor:Sending to TTS (edge): 'The current President of the United States is Joe ...' (part 0)
+[0] INFO:text_processor:TTS connection attempt 1/10 to http://localhost:8003/synthesize
+[3] INFO:tts_service.app:Synthesizing speech with edge for text: 'The current President of the United States is Joe ...'
+[3] INFO:tts_service.app:Using TTS engine: edge
+[3] INFO:tts_service.app:Using Edge TTS engine
+[3] INFO:tts_service.app:tts_edge called with: text length=96, voice=en-US-AriaNeural, speed=1.0, pitch=1.0
+[3] INFO:tts_service.app:Generating TTS with Edge TTS for text length: 96 with speed 1.0
+[3] INFO:tts_service.app:Using plain text for TTS: The current President of the United States is Joe ...
+[3] INFO:tts_service.app:Using newer Edge TTS API with direct rate and pitch control
+[3] INFO:tts_service.app:Edge TTS generation completed in 0.39s
+[3] INFO:tts_service.app:tts_edge: audio_bytes length before return: 46656
+[3] WARNING:tts_service.app:tts_edge: Audio is MP3, duration not calculated.
+[3] INFO:tts_service.app:Generated 46656 bytes of audio, duration: 0ms
+[3] INFO:tts_service.app:TTS synthesis completed in 0.39s for 96 chars
+[3] INFO:     127.0.0.1:7133 - "POST /synthesize HTTP/1.1" 200 OK
+[0] INFO:httpx:HTTP Request: POST http://localhost:8003/synthesize "HTTP/1.1 200 OK"
+[0] INFO:text_processor:TTS request successful on attempt 1
+[0] INFO:text_processor:Received TTS audio in mp3 format, duration: 0ms
+[0] INFO:text_processor:TTS audio part 0 sent to client successfully
+[0] INFO:text_processor:Completed streaming response with 1 TTS segments
+[2] WARNING:  WatchFiles detected changes in 'backend\text_processor.py'. Reloading...
+[2]  
+[3] WARNING:  WatchFiles detected changes in 'backend\text_processor.py'. Reloading...
+[3]  
+[0] WARNING:  WatchFiles detected changes in 'backend\text_processor.py'. Reloading...
+[1] WARNING:  WatchFiles detected changes in 'backend\text_processor.py'. Reloading...
+[0]  
+[1]  
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No heartbeat ack received from client 2298411086288
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #1 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #1
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #2 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #2
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #3 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #3
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No heartbeat ack received from client 2298411086288
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #1 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #1
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #2 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #2
+[0] INFO:websocket_handler:≡ƒÆôΓÜá∩╕Å Sent recovery heartbeat #3 to client 2298411086288
+[0] WARNING:websocket_handler:ΓÜá∩╕Å No response to recovery heartbeat #3

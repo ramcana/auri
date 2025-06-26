@@ -1,0 +1,8 @@
+.message-list-container {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  overflow-y: auto; /* Allows scrolling if content overflows */
+  flex-grow: 1; /* Takes up available space in the chat-area */
+  height: 100%;
+}

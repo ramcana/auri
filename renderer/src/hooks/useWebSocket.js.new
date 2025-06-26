@@ -1,0 +1,341 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+// Track instances of the hook to detect multiple mounts
+let hookInstanceCounter = 0;
+
+const useWebSocket = (providedUrl) => {
+  // Add unique instance ID to detect multiple hook instances
+  const hookInstanceId = useRef(++hookInstanceCounter);
+  console.log(`WebSocket hook initialized - Instance #${hookInstanceId.current} - URL: ${providedUrl}`);
+  
+  // Use relative WebSocket URL to avoid hostname mismatches
+  const url = providedUrl.startsWith('ws://') ? 
+    providedUrl : 
+    `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+  
+  console.log(`Using WebSocket URL: ${url}`);
+  
+  const [messages, setMessages] = useState([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const ws = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const pingInterval = useRef(null);
+  const MAX_RECONNECT_DELAY = 5000; // Maximum reconnect delay in ms
+  const MAX_RECONNECT_ATTEMPTS = 10; // Maximum number of reconnect attempts
+
+  // Clear any existing reconnect timeout
+  const clearReconnectTimeout = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Send a ping message through the WebSocket
+  const sendPing = useCallback(() => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      const ping = { 
+        type: "ping", 
+        timestamp: Date.now(),
+        clientId: `interval-${Date.now()}`,
+        client: "react-frontend"
+      };
+      console.debug('📤 Sending ping');
+      ws.current.send(JSON.stringify(ping));
+      return true;
+    }
+    return false;
+  }, []);
+
+  // Start ping interval after connection is established
+  const startPingInterval = useCallback(() => {
+    // Clear any existing interval
+    if (pingInterval.current) {
+      clearInterval(pingInterval.current);
+      pingInterval.current = null;
+    }
+    
+    // Start a new ping interval - more frequent pings for better stability
+    pingInterval.current = setInterval(() => {
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        sendPing();
+      } else if (ws.current?.readyState === WebSocket.CLOSED || ws.current?.readyState === WebSocket.CLOSING) {
+        console.warn(`⚠️ WebSocket closed or closing in ping interval`);
+      } else {
+        console.warn(`⚠️ Cannot send ping, WebSocket state: ${ws.current?.readyState}`);
+      }
+    }, 3000); // Send ping every 3 seconds for better stability
+  }, [sendPing]);
+
+  // Create WebSocket connection
+  const createWebSocket = useCallback(() => {
+    try {
+      // Create a new WebSocket connection
+      ws.current = new WebSocket(url);
+      
+      // Set up event handlers
+      ws.current.onopen = () => {
+        console.log('🟢 WebSocket connection opened');
+        setIsConnected(true);
+        setConnectionAttempts(0); // Reset connection attempts on successful connection
+        
+        // Send initial ping immediately to establish connection
+        if (ws.current.readyState === WebSocket.OPEN) {
+          const initialPing = { 
+            type: "ping", 
+            timestamp: Date.now(),
+            clientId: `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+            client: "react-frontend"
+          };
+          console.log('📤 Sending initial ping');
+          ws.current.send(JSON.stringify(initialPing));
+        }
+        
+        // Start ping interval to keep connection alive
+        startPingInterval();
+      };
+
+      ws.current.onmessage = (event) => {
+        try {
+          let parsedMessage;
+          
+          try {
+            parsedMessage = JSON.parse(event.data);
+            
+            // Handle different message types
+            switch (parsedMessage.type) {
+              case 'pong':
+                // Pong received, connection is alive
+                console.debug('🏓 Pong received');
+                break;
+              case 'heartbeat':
+                // Heartbeat received from server, respond to keep connection alive
+                console.debug('💓 Heartbeat received from server');
+                if (ws.current?.readyState === WebSocket.OPEN) {
+                  const heartbeatResponse = {
+                    type: "heartbeat_ack",
+                    timestamp: Date.now(),
+                    clientId: `heartbeat-${Date.now()}`,
+                    client: "react-frontend"
+                  };
+                  ws.current.send(JSON.stringify(heartbeatResponse));
+                  console.debug('💓 Heartbeat acknowledgment sent');
+                }
+                break;
+              case 'connection_status':
+                console.log(`🔌 Connection status: ${parsedMessage.status}`);
+                break;
+              default:
+                // Add the message to our state
+                setMessages((prevMessages) => [...prevMessages, parsedMessage]);
+            }
+          } catch (parseError) {
+            console.log('Message is not JSON, using raw data');
+            parsedMessage = event.data;
+            // Still add to messages
+            setMessages((prevMessages) => [...prevMessages, parsedMessage]);
+          }
+        } catch (error) {
+          console.error('Error processing WebSocket message:', error);
+        }
+      };
+
+      ws.current.onclose = (event) => {
+        setIsConnected(false);
+        console.warn(`🔴 WebSocket closed with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
+        
+        // Clear ping interval
+        if (pingInterval.current) {
+          clearInterval(pingInterval.current);
+          pingInterval.current = null;
+        }
+        
+        // More aggressive reconnection strategy
+        // Always attempt to reconnect unless it was a clean closure (1000) or user navigated away
+        if (event.code === 1000 && event.reason === 'Component unmounting') {
+          console.log('🛑 Clean shutdown, not reconnecting');
+        } else {
+          // Use different reconnect delays based on close code
+          let baseDelay = 500; // Default quick reconnect
+          
+          // 1005: No status code was provided
+          // 1006: Connection was closed abnormally
+          if (event.code === 1005 || event.code === 1006) {
+            console.log(`🔄 Immediate reconnect after common close code ${event.code}...`);
+            baseDelay = 250; // Very quick reconnect for common disconnect codes
+          } else {
+            console.log(`🔄 Reconnecting after close code ${event.code}...`);
+            baseDelay = 1000; // Slightly longer delay for other codes
+          }
+          
+          // Only try to reconnect if we haven't exceeded the maximum attempts
+          if (connectionAttempts < MAX_RECONNECT_ATTEMPTS) {
+            const delay = Math.min(baseDelay * Math.pow(1.3, connectionAttempts), MAX_RECONNECT_DELAY);
+            console.log(`🔄 Scheduling reconnect attempt in ${delay}ms (attempt ${connectionAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+            setConnectionAttempts(prev => prev + 1);
+            reconnectTimeoutRef.current = setTimeout(connect, delay);
+          } else {
+            console.error(`❌ Maximum reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Giving up.`);
+          }
+        }
+      };
+
+      ws.current.onerror = (error) => {
+        console.error('🚫 WebSocket error:', error);
+      };
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      // Schedule a reconnect attempt with custom initial delay
+      const delay = connectionAttempts === 0 
+        ? 500 
+        : Math.min(500 * Math.pow(1.5, connectionAttempts), MAX_RECONNECT_DELAY);
+      
+      console.log(`🕒 Reconnecting in ${delay}ms (attempt ${connectionAttempts + 1})`);
+      setConnectionAttempts(prev => prev + 1);
+      reconnectTimeoutRef.current = setTimeout(connect, delay);
+    }
+  }, [url, startPingInterval]);
+
+  // Public connect function that wraps createWebSocket
+  const connect = useCallback(() => {
+    clearReconnectTimeout();
+    createWebSocket();
+  }, [clearReconnectTimeout, createWebSocket]);
+
+  // Schedule a reconnect with exponential backoff
+  const scheduleReconnect = useCallback((initialDelayMs = 500) => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    
+    // Only try to reconnect if we haven't exceeded the maximum attempts
+    if (connectionAttempts < MAX_RECONNECT_ATTEMPTS) {
+      const delay = Math.min(initialDelayMs * Math.pow(1.5, connectionAttempts), MAX_RECONNECT_DELAY);
+      console.log(`🕒 Reconnecting in ${delay}ms (attempt ${connectionAttempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+      setConnectionAttempts(prev => prev + 1);
+      reconnectTimeoutRef.current = setTimeout(connect, delay);
+    } else {
+      console.error(`❌ Maximum reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Giving up.`);
+    }
+  }, [connectionAttempts, connect]);
+
+  useEffect(() => {
+    if (!url) return;
+
+    connect();
+    
+    // Multiple fallback ping mechanism to ensure connection stays alive
+    const pingFallbacks = [];
+    
+    // First fallback ping after 300ms
+    pingFallbacks.push(setTimeout(() => {
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        const fallbackPing = { 
+          type: "ping", 
+          timestamp: Date.now(),
+          clientId: `fallback1-${Date.now()}`,
+          client: "react-frontend"
+        };
+        console.warn("⚠️ Fallback 1: Sending initial ping");
+        ws.current.send(JSON.stringify(fallbackPing));
+      }
+    }, 300));
+    
+    // Second fallback ping after 700ms
+    pingFallbacks.push(setTimeout(() => {
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        const fallbackPing = { 
+          type: "ping", 
+          timestamp: Date.now(),
+          clientId: `fallback2-${Date.now()}`,
+          client: "react-frontend"
+        };
+        console.warn("⚠️ Fallback 2: Sending initial ping");
+        ws.current.send(JSON.stringify(fallbackPing));
+      }
+    }, 700));
+
+    // Handle visibility change to reconnect when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isConnected) {
+        connect();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup on unmount
+    return () => {
+      clearReconnectTimeout();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Clear ping interval
+      if (pingInterval.current) {
+        clearInterval(pingInterval.current);
+        pingInterval.current = null;
+      }
+      
+      // Clear all fallback ping timeouts
+      pingFallbacks.forEach(timeout => clearTimeout(timeout));
+      
+      // Close WebSocket connection if it exists
+      if (ws.current) {
+        console.log('Closing WebSocket connection on cleanup');
+        ws.current.close(1000, 'Component unmounting');
+        ws.current = null;
+      }
+    };
+  }, [url, connect, isConnected, clearReconnectTimeout]);
+  
+  // Send a text message through the WebSocket
+  const sendTextMessage = useCallback((text) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      try {
+        // Format as a proper JSON message with type
+        const message = JSON.stringify({
+          type: 'text',
+          text,
+          timestamp: Date.now()
+        });
+        ws.current.send(message);
+        return true;
+      } catch (error) {
+        console.error('Error sending text message:', error);
+        return false;
+      }
+    } else {
+      console.warn('Cannot send message, WebSocket is not connected');
+      return false;
+    }
+  }, []);
+
+  // Generic message sender
+  const sendMessage = useCallback((message) => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      try {
+        // Ensure message is a string
+        const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+        ws.current.send(messageStr);
+        return true;
+      } catch (error) {
+        console.error('Error sending message:', error);
+        return false;
+      }
+    } else {
+      console.warn('Cannot send message, WebSocket is not connected');
+      return false;
+    }
+  }, []);
+
+  return {
+    messages,
+    isConnected,
+    sendMessage,
+    sendTextMessage,
+    connect
+  };
+};
+
+export default useWebSocket;
