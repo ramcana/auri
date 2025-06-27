@@ -739,6 +739,19 @@ async def startup_event():
         logger.info("pyttsx3 package found (fallback TTS available)")
     except ImportError:
         logger.warning("pyttsx3 package not found. Install with: pip install pyttsx3")
+
+    # Check if DEFAULT_VOICE is valid for Edge TTS
+    if EDGE_TTS_AVAILABLE:
+        try:
+            available_voices = await edge_tts.list_voices()
+            if not any(v['ShortName'] == DEFAULT_VOICE for v in available_voices):
+                logger.warning(f"DEFAULT_VOICE '{DEFAULT_VOICE}' not found in available Edge TTS voices. "
+                               f"TTS might fail or use a fallback voice. "
+                               f"Consider using a voice from `edge-tts --list-voices` (e.g., en-US-JennyNeural).")
+            else:
+                logger.info(f"Default TTS voice '{DEFAULT_VOICE}' is valid for Edge TTS.")
+        except Exception as e:
+            logger.warning(f"Could not verify DEFAULT_VOICE for Edge TTS: {e}")
         
     logger.info("TTS service started successfully")
 

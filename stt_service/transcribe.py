@@ -10,7 +10,13 @@ logger = logging.getLogger(__name__)
 # Determine the base directory of this script to locate whisper.cpp and models
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WHISPER_CPP_EXE = os.path.join(BASE_DIR, 'whisper-cli.exe')
-MODEL_PATH = os.path.join(BASE_DIR, 'models', 'ggml-base.en.bin')
+
+# Allow model path to be configured by environment variable, with a default
+DEFAULT_MODEL_PATH = os.path.join(BASE_DIR, 'models', 'ggml-base.en.bin')
+MODEL_PATH = os.getenv('WHISPER_MODEL_PATH', DEFAULT_MODEL_PATH)
+
+# Log the model path being used
+logger.info(f"Using Whisper model at: {MODEL_PATH}")
 
 def transcribe_audio(audio_file_path: str) -> str:
     """

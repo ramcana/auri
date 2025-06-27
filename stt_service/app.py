@@ -12,6 +12,12 @@ from .transcribe import transcribe_audio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Log the model path being used by the transcribe module
+# This is just to ensure it's visible when the app starts,
+# transcribe.py already logs this when it's imported.
+from .transcribe import MODEL_PATH as WHISPER_MODEL_USED
+logger.info(f"STT Service will use Whisper model: {WHISPER_MODEL_USED}")
+
 app = FastAPI(
     title="Speech-to-Text (STT) Service",
     description="A FastAPI service that uses whisper.cpp to transcribe audio.",

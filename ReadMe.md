@@ -47,6 +47,7 @@ Auri is a modular, real-time voice assistant with a modern Electron/React deskto
 - Node.js 18+
 - Python 3.9+
 - Git
+- **FFmpeg**: Required for audio conversion by both the STT service (if input is not WAV) and the VAD processing in the backend. Ensure FFmpeg is installed and available in your system's PATH. You can download it from [https://ffmpeg.org/](https://ffmpeg.org/).
 
 ### 1. Clone the Repository
 ```bash
@@ -79,8 +80,19 @@ This launches the Electron app, backend, and frontend with hot reload.
 ---
 
 ## 📝 Environment Variables
-- All sensitive keys and config are managed in `.env` (see `.env.example` for template)
-- Example: `NEWS_API_KEY`, service ports, etc.
+- All sensitive keys and config are managed in `.env` (see `.env.example` for template).
+- Key variables include:
+    - `STT_SERVICE_URL`, `LLM_SERVICE_URL`, `TTS_SERVICE_URL`: URLs for the respective backend services.
+    - `LLM_BASE_URL` (for `llm_service.py` if acting as a proxy to Ollama), `OLLAMA_API_URL`, `OLLAMA_DEFAULT_MODEL` (for the new ReadMe section).
+    - `DEFAULT_VOICE`, `TTS_SPEED`, `TTS_PITCH`: TTS configuration.
+    - `WHISPER_MODEL_PATH`: **New!** Specifies the full path to the `ggml` Whisper model file for the STT service.
+        - Example: `WHISPER_MODEL_PATH=C:/path/to/your/models/ggml-medium.en.bin` or `/path/to/your/models/ggml-medium.en.bin`.
+        - If not set, defaults to `stt_service/models/ggml-base.en.bin`.
+        - You can download various Whisper models (e.g., base, small, medium, large; English-only or multilingual) from the internet. Search for "ggml whisper models". Larger models are more accurate but slower. Ensure the model is compatible with `whisper.cpp`.
+    - `NEWS_API_KEY`: For the news tool module.
+    - `WEATHER_API_KEY`: Optional. Used if you switch the weather tool to an API that requires a key. The default Open-Meteo implementation does not require a key.
+    - `VAD_AGGRESSIVENESS`: (Optional) Sets the Voice Activity Detection aggressiveness. An integer between 0 (least aggressive, more speech) and 3 (most aggressive, less speech). Defaults to 3.
+    - `VAD_FRAME_MS`: (Optional) Sets the VAD frame duration in milliseconds. Can be 10, 20, or 30. Defaults to 30.
 
 ---
 
