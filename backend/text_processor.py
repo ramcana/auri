@@ -8,6 +8,10 @@ import re
 import traceback
 from fastapi import WebSocket
 from typing import Dict, Any, List, Optional
+from datetime import datetime # For timestamps
+
+# Import memory manager function
+from backend.memory_manager import add_assistant_fact
 
 # --- Helper Functions ---
 
@@ -118,24 +122,46 @@ def split_into_sentences(text: str) -> List[str]:
 async def process_text(websocket: WebSocket, payload: Dict[str, Any]):
     """Process a text message from the client, using conversation history for context."""
     user_text = payload.get('text', '')
-    history = payload.get('history', [])
+    history = payload.get('history', []) # This history is from the client, might be different from server-side facts
+    user_id = payload.get("user_id") or "default_user" # Assuming user_id might be in payload
 
     if not user_text.strip():
         logger.warning("Received empty text message, ignoring.")
         return
 
-    context_history = history[:-1] if history else []
+    # Note: context_history for the LLM prompt is built by llm_service.py using summarize_facts
+    # The 'history' in this payload is the client-side view, which might not be used directly for LLM context here.
+    # llm_service.py is responsible for constructing the full prompt including system messages, facts, and tool context.
 
-    logger.info(f"Processing text: '{user_text}' with {len(context_history)} context messages.")
+    logger.info(f"Processing text from user {user_id}: '{user_text}'")
     
     stream_id = f"stream_{int(time.time() * 1000)}"
+
+    # The llm_payload should ideally just be the user message and necessary parameters.
+    # llm_service.py will enrich this with history and context.
+    # However, the current structure has text_processor call llm_service with full message history.
+    # For simplicity, we'll keep this structure for now.
+    # The 'history' from payload is client-side, llm_service will use server-side summarized_facts.
+    # The user_id needs to be passed to llm_service for it to manage facts correctly.
+
+    # Construct messages for LLM service, ensuring user_id is passed for context management
+    # The `llm_service` expects a "messages" list and will inject its own context (facts, tools)
+    # The `history` in the payload here is the client's current view of the chat.
+    # `llm_service.py` will use `summarize_facts(user_id)` for its historical context.
+
+    # We will let llm_service.py handle the context building from summarize_facts(user_id).
+    # We just need to send the current user message.
+    # The payload to llm_service.py should include user_id.
+    messages_for_llm = []
+    if history: # Pass client history if available, llm_service might use it or parts of it
+        messages_for_llm.extend(history) # This assumes history is already in {"role": ..., "content": ...} format
+    messages_for_llm.append({"role": "user", "content": user_text})
+
     llm_payload = {
-        "model": "llama3",
-        "messages": [
-            *context_history,
-            {"role": "user", "content": user_text}
-        ],
-        "stream": True
+        "model": "llama3", # This could be made configurable
+        "messages": messages_for_llm,
+        "stream": True,
+        "user_id": user_id # Pass user_id to llm_service
     }
 
     full_response = ""
@@ -234,6 +260,23 @@ async def process_text(websocket: WebSocket, payload: Dict[str, Any]):
                 "timestamp": time.time()
             })
             logger.info(f"Stream {stream_id} ended. Completed with {tts_sent_count} TTS segments")
+
+            # Log assistant's response to memory
+            if full_response:
+                # TODO: Determine if a tool was used by the LLM to generate this response.
+                # This is tricky because tool_layer is called by llm_service *before* this point.
+                # For now, we don't have direct info here if a tool was used by the LLM for this specific response.
+                # llm_service.py would be a better place to log tool usage associated with a response,
+                # but it only streams chunks.
+                # A more robust solution would involve the LLM service sending structured events
+                # about tool calls and final responses.
+                # For now, just log the textual response.
+                add_assistant_fact(
+                    user_id=user_id,
+                    content=full_response,
+                    timestamp=datetime.utcnow().isoformat()
+                )
+                logger.info(f"Logged assistant fact for user {user_id}: {full_response[:50]}...")
 
     except httpx.RequestError as e:
         logger.error(f"Could not connect to LLM service: {e}")

@@ -99,7 +99,8 @@ This launches the Electron app, backend, and frontend with hot reload.
 ## 🛠️ Extending & Customizing
 - **Add new tools:** Place new modules in `backend/modules/` and register them in the backend.
 - **Customize UI:** Edit React components in `renderer/src/` and assets in `electron/img/`.
-- **User memory:** All user profile and fact storage is JSON-based for easy migration to a database.
+- **User memory:** User profiles (`backend/user_profiles/`) and conversation facts (`backend/user_facts/`) are stored in JSON files.
+    - Conversation facts are stored as a list of structured JSON objects, each representing a turn with fields like `type` ("user" or "assistant"), `content`, and `timestamp`. This format is designed for clarity and future extensibility (e.g., for database migration or more advanced memory features).
 
 ---
 

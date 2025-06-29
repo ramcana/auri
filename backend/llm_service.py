@@ -16,7 +16,10 @@ load_dotenv()
 # Import the tool layer
 from backend.tool_layer import get_real_world_context
 from backend.chat import handle_message
-from backend.memory_manager import summarize_facts, add_fact
+# Updated memory_manager imports
+from backend.memory_manager import summarize_facts, add_user_fact
+# add_fact is deprecated, add_assistant_fact will be used in text_processor.py
+from datetime import datetime # For timestamps
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO)
@@ -115,12 +118,13 @@ async def generate_endpoint(request: Request):
         model = payload.get("model")
         user_context = handle_message(user_id, user_message_content, tag=tag, model=model)
 
-        # --- Conversation Memory: Add a simple fact ---
-        # (For now, just log the user's message as a fact. This can be improved with NLP extraction.)
-        add_fact(user_id, f"User said: {user_message_content}")
+        # --- Conversation Memory: Add structured user fact ---
+        add_user_fact(user_id, user_message_content, timestamp=datetime.utcnow().isoformat())
+        logger.info(f"Logged user fact for {user_id}: {user_message_content[:50]}...")
 
         # Inject summarized facts as a system message
-        facts_summary = summarize_facts(user_id)
+        # summarize_facts will now return a string formatted for LLM consumption
+        facts_summary = summarize_facts(user_id, max_turns=5) # Specify max_turns
         if facts_summary:
             logger.info(f"Injecting conversation facts: {facts_summary}")
             facts_message = {"role": "system", "content": facts_summary}

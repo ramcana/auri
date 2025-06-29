@@ -174,7 +174,13 @@ def get_real_world_context(user_message: str) -> str:
         if location:
             time_info = get_current_time(location)
             if time_info:
-                contexts.append(time_info)
+                tool_call_str = f"get_current_time(\"{location}\")"
+                formatted_context = (
+                    f"System: Tool Used: get_current_time\n"
+                    f"Tool Input: {location}\n" # Simple input, can be string
+                    f"Tool Result:\n```\n{time_info}\n```"
+                )
+                contexts.append(formatted_context)
 
     # 2. Wikipedia / Entity Lookup Tool (legacy)
     entity_triggers = ["who is", "who's", "whos", "who was", "tell me about", "what is", "what's"]
@@ -190,24 +196,52 @@ def get_real_world_context(user_message: str) -> str:
         
         if entity_query:
             summary = ""
+            tool_input_display = entity_query # Default display input
+            entity_to_lookup = ""
+
             # Check if the extracted query CONTAINS a known, specific entity phrase.
-            for phrase, page_title in SPECIFIC_ENTITY_MAP.items():
-                if phrase in entity_query:
-                    summary = get_wikipedia_summary(page_title)
-                    break # Found a specific match, stop searching
+            matched_specific_phrase = False
+            for phrase, mapped_entity in SPECIFIC_ENTITY_MAP.items():
+                if phrase in entity_query.lower(): # Compare with lowercased entity_query
+                    tool_input_display = phrase # The phrase that was matched
+                    entity_to_lookup = mapped_entity
+                    summary = get_wikipedia_summary(entity_to_lookup)
+                    matched_specific_phrase = True
+                    break
             
-            # If no specific match was found, try a direct lookup with the extracted query.
-            if not summary:
-                summary = get_wikipedia_summary(entity_query.title())
+            if not matched_specific_phrase:
+                entity_to_lookup = entity_query.title()
+                tool_input_display = entity_query # Use the original query for display
+                summary = get_wikipedia_summary(entity_to_lookup)
 
             if summary:
-                contexts.append(summary)
+                formatted_context = (
+                    f"System: Tool Used: get_wikipedia_summary\n"
+                    f"Tool Input: {tool_input_display}\n"
+                    f"Tool Result:\n```\n{summary}\n```"
+                )
+                contexts.append(formatted_context)
 
     # 3. Modular Tool Routing (new)
-    module_name, func_name, result = router_instance.route(user_message)
-    if result:
-        # Ensure result is a string and not None before appending
-        contexts.append(str(result))
+    # Assuming router_instance.route might be updated to return richer input representations
+    # For now, it's: module_name, func_name, input_args (can be simple string or dict), result_str
+    module_name, func_name, input_args, result_str = router_instance.route(user_message)
+    if result_str:
+        # Reconstruct a semblance of the call for display
+        # input_args_str = ", ".join(f"{k}='{v}'" for k, v in input_args.items()) if input_args else ""
+        # tool_call_display = f"{module_name}.{func_name}({input_args_str})"
+        # For simplicity, just use the function name and its direct input if available, or generic message.
+        # The router needs to be enhanced to provide better input representation for this.
+        # For now, let's assume input_args is the raw matched text or a simple dict.
+        input_display = str(input_args) if input_args else "N/A"
+
+        formatted_context = (
+            f"System: Tool Used: {module_name}.{func_name}\n"
+            f"Tool Input: {input_display}\n"
+            f"Tool Result:\n```\n{str(result_str)}\n```"
+        )
+        contexts.append(formatted_context)
+
 
     # 4. Weather Tool (Improved)
     # Example trigger: "what's the weather in London?" or "weather in Paris"
@@ -221,7 +255,12 @@ def get_real_world_context(user_message: str) -> str:
             if not ("time in" in lower_msg and location in lower_msg.split("time in")[1]):
                 weather_info = get_weather_forecast(location)
                 if weather_info:
-                    contexts.append(weather_info)
+                    formatted_context = (
+                        f"System: Tool Used: get_weather_forecast\n"
+                        f"Tool Input: {location}\n"
+                        f"Tool Result:\n```\n{weather_info}\n```"
+                    )
+                    contexts.append(formatted_context)
     elif any(word in lower_msg for word in ["weather", "forecast"]) and not weather_match:
         # If "weather" or "forecast" is mentioned but not in the "weather in <location>" pattern,
         # try to extract a location if it was mentioned earlier in the message for other tools.
@@ -240,13 +279,19 @@ def get_real_world_context(user_message: str) -> str:
         if found_loc_for_general_weather:
             weather_info = get_weather_forecast(found_loc_for_general_weather)
             if weather_info:
-                contexts.append(weather_info)
+                formatted_context = (
+                    f"System: Tool Used: get_weather_forecast\n"
+                    f"Tool Input: {found_loc_for_general_weather}\n"
+                    f"Tool Result:\n```\n{weather_info}\n```"
+                )
+                contexts.append(formatted_context)
         # else:
             # contexts.append("Please specify a location for the weather forecast.") # Alternative
 
     # 5. News Tool (handled by modules/news_card)
 
     if contexts:
-        return f"Here’s some real-world context: {' '.join(contexts)}"
+        # Join individual tool context blocks with double newlines for better separation
+        return f"System: The following real-world context was gathered by tools:\n\n" + "\n\n".join(contexts)
 
     return ""

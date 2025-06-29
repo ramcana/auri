@@ -33,6 +33,9 @@ VAD_SAMPLE_RATE = 16000 # webrtcvad supports 8000, 16000, 32000, 48000
 VAD_CHANNELS = 1
 VAD_BYTES_PER_SAMPLE = 2 # 16-bit PCM
 
+# Log VAD parameters at module load time
+logger.info(f"VAD Initialized with: Aggressiveness={VAD_AGGRESSIVENESS}, Frame Duration={VAD_FRAME_MS}ms, Sample Rate={VAD_SAMPLE_RATE}Hz")
+
 def _convert_webm_to_wav_p_cm(webm_data: bytes, target_sample_rate: int = VAD_SAMPLE_RATE, target_channels: int = VAD_CHANNELS) -> bytes:
     """Converts WEBM audio data to raw PCM WAV bytes using ffmpeg."""
     with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp_webm_file, \
