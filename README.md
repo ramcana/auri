@@ -1,99 +1,210 @@
 # Auri
 
-**Auri** is your local AI assistant powered by [vLLM](https://github.com/vllm-project/vllm) and [Ollama](https://ollama.com). It provides a Chainlit-based chat interface to interact with large language models locally, supporting both GPU-accelerated models via vLLM and lightweight models via Ollama.
+A local AI chat assistant with a [Chainlit](https://chainlit.io) interface, dual inference backends, and ComfyUI-style model management — drop models and LoRAs into folders and they appear automatically.
+
+| Backend | Best for | Discovery |
+|---|---|---|
+| [vLLM](https://github.com/vllm-project/vllm) | Large models, GPU-accelerated, LoRA adapters | `models/vllm/<name>/` |
+| [Ollama](https://ollama.com) | Small/quantized models, CPU-friendly | Auto-detected from `ollama list` |
+
+---
 
 ## Features
 
-- **Dual Backend Support**: Run large models on GPU with vLLM or smaller models with Ollama.
-- **LoRA Adapters**: Customize model behavior with Low-Rank Adaptations.
-- **Easy Model Management**: Add models by placing them in the appropriate directories.
-- **Web Interface**: Built with Chainlit for a seamless chat experience.
+- **Dual inference backends** — vLLM for GPU-accelerated large models, Ollama for small/quantized models, routed automatically
+- **Dynamic LoRA adapters** — drop PEFT adapter folders into `loras/` and assign them to models in `configs/models.yaml`
+- **Auto-discovery** — Ollama models appear on startup without any config; new `ollama pull` models show up after a restart
+- **Sidebar controls** — Model, LoRA, Temperature, and Max Tokens selectable per conversation
+- **Per-conversation history** — each chat session maintains its own message history and system prompt
+- **Observability** — per-run vLLM logs in `logs/` and a live `logs/active_vllm.json` showing the running config
 
-## Prerequisites
+---
 
-- Python 3.8+
-- [vLLM](https://github.com/vllm-project/vllm) (install with CUDA support for GPU acceleration)
-- [Ollama](https://ollama.com/download) (standalone binary)
+## Requirements
+
+- Python 3.11+
+- NVIDIA GPU with CUDA (for vLLM models)
+- [Ollama](https://ollama.com/download) daemon running (for Ollama models)
+- [vLLM](https://github.com/vllm-project/vllm) installed separately (for GPU models)
+
+---
 
 ## Installation
 
-1. Clone or download this repository.
+```bash
+# 1. Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
-2. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+# 2. Install Auri dependencies
+pip install -r requirements.txt
 
-3. Install vLLM separately (ensure CUDA is available for GPU support):
-   ```bash
-   pip install vllm
-   ```
+# 3. Install vLLM (only needed if you plan to use GPU models)
+pip install vllm
 
-4. Install and start Ollama:
-   - Download from [ollama.com](https://ollama.com/download)
-   - Follow the installation instructions for your OS.
+# 4. Copy environment config and edit if needed
+cp .env.example .env
+```
 
-## Usage
+---
 
-1. Start the application:
-   ```bash
-   chainlit run app.py
-   ```
+## Running
 
-2. Open your browser to the provided URL (usually `http://localhost:8000`).
+```bash
+chainlit run -h app.py
+```
 
-3. Click the **settings icon** (bottom-left of the chat bar) to open the configuration panel.
+Then open `http://localhost:8000` in your browser.
 
-4. Select your **Model** — large models run on vLLM (GPU-accelerated), small ones via Ollama.
+> **WSL users:** use `-h` (headless) to prevent Chainlit from trying to auto-open a browser via Windows interop.
 
-5. Optionally pick a **LoRA Adapter** to specialize the model's behavior.
-
-6. Start chatting!
+---
 
 ## Adding Models
 
-### vLLM (GPU models)
-Place a HuggingFace model directory inside `models/vllm/`:
-```
-models/vllm/my-model/
-    config.json
-    *.safetensors
+### Ollama models
+
+Just pull them — they appear automatically on the next restart:
+
+```bash
+ollama pull llama3.2
 ```
 
-### Ollama models
-Create a directory inside `models/ollama/`. Optionally add a `model.txt` with the Ollama tag if the directory name differs from the tag (e.g., `phi3:mini`):
+To customise the display name or system prompt, add an entry to `configs/models.yaml`:
+
+```yaml
+models:
+  llama3-2:
+    backend: ollama
+    ollama_model_name: "llama3.2:latest"
+    display_name: "LLaMA 3.2"
+    system_prompt: "You are Auri, a helpful assistant."
 ```
-models/ollama/phi3-mini/
-    model.txt   ← contains "phi3:mini"
+
+### vLLM models (GPU)
+
+Place a HuggingFace model directory in `models/vllm/` — it needs a `config.json` or at least one `.safetensors` file:
+
 ```
+models/vllm/mistral-7b/
+    config.json
+    model.safetensors
+```
+
+Then add a YAML entry:
+
+```yaml
+models:
+  mistral-7b:
+    backend: vllm
+    path: "models/vllm/mistral-7b"
+    display_name: "Mistral 7B"
+    gpu_memory_utilization: 0.85
+    max_model_len: 8192
+    dtype: "bfloat16"
+```
+
+---
 
 ## Adding LoRA Adapters
 
-Place a HuggingFace PEFT adapter directory inside `loras/`:
+Drop a HuggingFace PEFT adapter directory into `loras/` — it must contain `adapter_config.json`:
+
 ```
 loras/my-lora/
     adapter_config.json
     adapter_model.safetensors
 ```
 
-Then add it to `configs/models.yaml` under the model's `compatible_loras` list.
+Then reference it from the base model's entry in `configs/models.yaml`:
+
+```yaml
+models:
+  mistral-7b:
+    backend: vllm
+    compatible_loras: [my-lora]
+    pinned_loras: [my-lora]      # load at vLLM startup (optional)
+```
+
+---
 
 ## Configuration
 
-- Models and LoRAs are configured in `configs/models.yaml`.
-- Environment variables can be set in `.env` (copy from `.env.example`).
+All configuration lives in two places:
 
-## Tips
+| File | Purpose |
+|---|---|
+| `configs/models.yaml` | Model metadata, LoRA compatibility, system prompts, vLLM tuning |
+| `.env` | Runtime settings — vLLM host/port, Ollama URL, log level |
 
-- Switching models may take a moment as the vLLM server restarts — a status message will appear.
-- vLLM models marked **[offline]** indicate the Ollama daemon isn't running.
-- Check `logs/vllm_*.log` and `logs/active_vllm.json` to inspect the running vLLM configuration.
-- Chainlit is single-process by default; for production, consider scaling options.
+### Key `models.yaml` fields
 
-## License
+```yaml
+schema_version: 1
 
-[Add license if applicable]
+defaults:
+  max_tokens: 2048
+  temperature: 0.7
+  max_loaded_loras: 4      # LRU cap for simultaneously loaded LoRAs
 
-## Contributing
+models:
+  my-model:
+    backend: vllm | ollama
+    display_name: "Human-readable name"
+    system_prompt: "Custom system prompt for this model."
+    compatible_loras: [lora-name-1, lora-name-2]
+    pinned_loras: [lora-name-1]    # always loaded at vLLM startup
+    # vLLM-specific:
+    gpu_memory_utilization: 0.85
+    max_model_len: 8192
+    dtype: bfloat16
+    tensor_parallel_size: 1
+    extra_vllm_args: []
+    # Ollama-specific:
+    ollama_model_name: "tag:variant"
+```
 
-[Add contribution guidelines if applicable]
+### Key `.env` settings
+
+```bash
+VLLM_HOST=127.0.0.1
+VLLM_PORT=8000
+VLLM_STARTUP_TIMEOUT=180
+OLLAMA_BASE_URL=http://localhost:11434/v1
+MAX_LOADED_LORAS=4
+AURI_LOG_LEVEL=INFO
+```
+
+---
+
+## Project Structure
+
+```
+Auri/
+├── app.py                  # Chainlit entry point
+├── chainlit.md             # In-app welcome screen
+├── configs/
+│   └── models.yaml         # Model and LoRA configuration
+├── models/
+│   ├── vllm/               # HuggingFace model directories
+│   └── ollama/             # Optional: override dirs with model.txt
+├── loras/                  # PEFT LoRA adapter directories
+├── logs/                   # Per-run vLLM logs + active_vllm.json
+└── auri/
+    ├── settings.py         # AppSettings, .env loader
+    ├── model_manager.py    # Filesystem + Ollama daemon discovery
+    ├── vllm_server.py      # vLLM subprocess lifecycle & state machine
+    ├── ollama_client.py    # Ollama OpenAI-compatible client
+    └── router.py           # Request routing & streaming
+```
+
+---
+
+## Debugging
+
+- **vLLM won't start** — check `logs/vllm_<timestamp>.log` for the full output
+- **Which model is loaded** — inspect `logs/active_vllm.json` for the current model, LoRAs, PID, and exact CLI args
+- **Ollama models missing** — run `ollama list` to confirm they're pulled, then restart Auri
+- **Port conflict** — set `VLLM_PORT` in `.env` to a free port; Chainlit defaults to 8000 for its own UI
+
+> **LoRA routing note:** vLLM selects a LoRA by passing its name as the `model` field in the API request. Verify this works with your installed vLLM version before relying on it — see `auri/router.py:_resolve_vllm_model_name()` to adjust if needed.
