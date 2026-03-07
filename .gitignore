@@ -1,0 +1,38 @@
+# Environment
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Chainlit
+.chainlit/
+
+# Models and LoRAs (large binary files — add explicitly if needed)
+models/vllm/*/
+models/ollama/*/
+loras/*/
+!models/vllm/.gitkeep
+!models/ollama/.gitkeep
+!loras/.gitkeep
+
+# Logs
+logs/*.log
+logs/active_vllm.json
+
+# OS
+.DS_Store
+Thumbs.db

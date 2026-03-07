@@ -1,0 +1,98 @@
+schema_version: 1
+
+# Default values merged into every model entry.
+# Override per-model by specifying the field under models:<name>:
+defaults:
+  vllm_port: 8000
+  vllm_host: "127.0.0.1"
+  ollama_host: "http://localhost:11434"
+  max_tokens: 2048           # output completion tokens (OpenAI max_tokens, not context length)
+  temperature: 0.7
+  max_loaded_loras: 4        # max LoRAs simultaneously loaded in vLLM (LRU eviction)
+
+# Model definitions.
+# - vLLM models: require a matching subdir under models/vllm/ with weights on disk.
+# - Ollama models: declared here directly — no local dir needed (Ollama manages its own storage).
+models:
+
+  # ── Ollama models (installed on this system) ──────────────────────────────
+
+  qwen3-14b:
+    backend: ollama
+    ollama_model_name: "qwen3:14b"
+    display_name: "Qwen3 14B"
+    max_tokens: 4096
+    system_prompt: "You are Auri, a helpful assistant."
+
+  mistral-nemo:
+    backend: ollama
+    ollama_model_name: "mistral-nemo:latest"
+    display_name: "Mistral Nemo"
+    max_tokens: 4096
+    system_prompt: "You are Auri, a helpful assistant."
+
+  qwen2-5-7b:
+    backend: ollama
+    ollama_model_name: "qwen2.5:7b-instruct"
+    display_name: "Qwen2.5 7B Instruct"
+    max_tokens: 4096
+    system_prompt: "You are Auri, a helpful assistant."
+
+  deepseek-r1-8b:
+    backend: ollama
+    ollama_model_name: "deepseek-r1:8b"
+    display_name: "DeepSeek R1 8B"
+    max_tokens: 4096
+    system_prompt: "You are Auri, a helpful assistant."
+
+  # ── Example vLLM model ────────────────────────────────────────────────────
+  # Uncomment and edit after placing the model in models/vllm/mistral-7b-instruct/
+  #
+  # mistral-7b-instruct:
+  #   backend: vllm
+  #   path: "models/vllm/mistral-7b-instruct"
+  #   display_name: "Mistral 7B Instruct"
+  #   gpu_memory_utilization: 0.85
+  #   max_model_len: 8192
+  #   max_tokens: 2048
+  #   dtype: "bfloat16"
+  #   tensor_parallel_size: 1
+  #   compatible_loras: []          # names must match subdirs under loras/
+  #   pinned_loras: []              # subset of compatible_loras loaded at startup
+  #   system_prompt: "You are Auri, a helpful assistant."
+  #   extra_vllm_args: []
+
+  # ── Example multi-GPU vLLM model ──────────────────────────────────────────
+  # llama3-70b:
+  #   backend: vllm
+  #   path: "models/vllm/llama3-70b"
+  #   display_name: "LLaMA 3 70B"
+  #   gpu_memory_utilization: 0.90
+  #   max_model_len: 4096
+  #   max_tokens: 2048
+  #   dtype: "bfloat16"
+  #   tensor_parallel_size: 2
+  #   compatible_loras: []
+  #   pinned_loras: []
+  #   system_prompt: "You are Auri, a helpful assistant."
+  #   extra_vllm_args: ["--enforce-eager"]
+
+  # ── Example Ollama model ──────────────────────────────────────────────────
+  # Create the dir models/ollama/phi3-mini/ (empty or with model.txt containing "phi3:mini")
+  #
+  # phi3-mini:
+  #   backend: ollama
+  #   ollama_model_name: "phi3:mini"   # actual Ollama tag (may differ from dir name)
+  #   display_name: "Phi-3 Mini (Ollama)"
+  #   max_tokens: 2048
+  #   compatible_loras: []
+  #   system_prompt: "You are Auri, a concise and helpful assistant."
+
+# LoRA adapter metadata. Keys must match subdirectory names under loras/.
+# Each loras/<name>/ dir must contain adapter_config.json to be discovered.
+loras:
+  # Example:
+  # my-finetune-v1:
+  #   path: "loras/my-finetune-v1"
+  #   display_name: "My Finetune v1"
+  #   base_model: "mistral-7b-instruct"   # informational — used for compatibility validation
