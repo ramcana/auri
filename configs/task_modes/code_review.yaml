@@ -1,0 +1,14 @@
+display_name: Code Review
+description: Review code for bugs, style issues, and improvement opportunities
+
+preferred_capabilities:
+  - coding
+
+enabled_tools:
+  - filesystem
+  - git
+  - retrieve_knowledge
+
+prompt_template: code_review
+response_format: text
+max_output_tokens: 4096

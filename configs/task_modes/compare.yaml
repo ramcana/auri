@@ -1,0 +1,13 @@
+display_name: Compare
+description: Compare two or more pieces of content, code, or documents side by side
+
+preferred_capabilities:
+  - chat
+
+enabled_tools:
+  - filesystem
+  - retrieve_knowledge
+
+prompt_template: compare
+response_format: text
+max_output_tokens: 2048

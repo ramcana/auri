@@ -1,0 +1,13 @@
+display_name: Summarize
+description: Summarize documents, articles, or conversation history into key points
+
+preferred_capabilities:
+  - chat
+
+enabled_tools:
+  - retrieve_knowledge
+  - web_search
+
+prompt_template: summarize
+response_format: text
+max_output_tokens: 1024

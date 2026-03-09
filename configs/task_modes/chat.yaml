@@ -1,0 +1,12 @@
+display_name: Chat
+description: General conversation, questions, and open-ended assistance
+
+preferred_capabilities:
+  - chat
+
+# Empty enabled_tools means all auto-approved tools are available
+enabled_tools: []
+
+prompt_template: chat
+response_format: text
+max_output_tokens: null

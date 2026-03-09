@@ -1,0 +1,12 @@
+display_name: Extract
+description: Extract structured information, entities, or key facts from documents
+
+preferred_capabilities:
+  - chat
+
+enabled_tools:
+  - retrieve_knowledge
+
+prompt_template: extract
+response_format: text
+max_output_tokens: 2048
