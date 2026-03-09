@@ -1,0 +1,41 @@
+services:
+  auri:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Points to Ollama running on the host (WSL or Windows).
+      # Docker Desktop resolves host.docker.internal → the Windows host automatically.
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
+      - AURI_LOG_LEVEL=INFO
+    volumes:
+      # Persistent runtime data — lives outside the container
+      - ./models:/app/models
+      - ./loras:/app/loras
+      - ./workspaces:/app/workspaces
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Mount configs for live editing without rebuild (comment out to use baked-in defaults)
+      - ./configs:/app/configs
+    restart: unless-stopped
+
+  # ── Optional: run Ollama inside Docker instead of using the host daemon ─────
+  # Uncomment this block and change OLLAMA_BASE_URL above to http://ollama:11434/v1
+  # Requires NVIDIA Container Toolkit + Docker Desktop GPU support.
+  #
+  # ollama:
+  #   image: ollama/ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+
+# volumes:
+#   ollama_data:

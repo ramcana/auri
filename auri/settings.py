@@ -26,6 +26,8 @@ class AppSettings:
     loras_dir: Path
     config_path: Path
     logs_dir: Path
+    prompts_dir: Path
+    workspaces_root: Path
 
     # --- vLLM server ---
     vllm_host: str = "127.0.0.1"
@@ -53,6 +55,8 @@ def load_settings() -> AppSettings:
         loras_dir=root / "loras",
         config_path=root / "configs" / "models.yaml",
         logs_dir=root / "logs",
+        prompts_dir=root / "configs" / "prompts",
+        workspaces_root=root / "workspaces",
         vllm_host=os.getenv("VLLM_HOST", "127.0.0.1"),
         vllm_port=int(os.getenv("VLLM_PORT", "8000")),
         vllm_startup_timeout=int(os.getenv("VLLM_STARTUP_TIMEOUT", "180")),

@@ -34,6 +34,14 @@ logger = logging.getLogger(__name__)
 # ── Data classes ──────────────────────────────────────────────────────────────
 
 @dataclass
+class ValidationIssue:
+    """One validation finding for a model or LoRA."""
+    model_name: str
+    level: str       # "error" | "warning"
+    message: str
+
+
+@dataclass
 class LoRAConfig:
     name: str
     path: Path
@@ -61,6 +69,10 @@ class ModelConfig:
 
     # Ollama fields (ignored for vllm backend)
     ollama_model_name: Optional[str] = None
+
+    # Capabilities used for intent-based routing
+    # Values: "chat", "coding", "tools", "vision"
+    capabilities: list[str] = field(default_factory=list)
 
     # Shared
     system_prompt: str = "You are Auri, a helpful assistant."
@@ -142,6 +154,100 @@ class ModelManager:
             if lora:
                 result.append(lora)
         return result
+
+    # ── Capability validation ─────────────────────────────────────────────────
+
+    _VALID_CAPABILITIES: frozenset[str] = frozenset({"chat", "coding", "tools", "vision"})
+
+    def validate(self) -> list[ValidationIssue]:
+        """Run config validation on all loaded models and LoRAs.
+
+        Returns a list of ValidationIssues (level='error' or 'warning').
+        Errors indicate the model will likely fail at inference time.
+        Warnings indicate suspicious config that may cause unexpected behaviour.
+
+        Does NOT mutate model state — callers decide how to act on results.
+        """
+        issues: list[ValidationIssue] = []
+        with self._lock:
+            models = dict(self._models)
+            loras = dict(self._loras)
+        for model in models.values():
+            issues.extend(self._validate_model(model, loras))
+        return issues
+
+    def _validate_model(
+        self,
+        model: ModelConfig,
+        loras: dict[str, LoRAConfig],
+    ) -> list[ValidationIssue]:
+        issues: list[ValidationIssue] = []
+
+        # 1. vLLM path existence and weight files
+        if model.backend == "vllm":
+            if model.path is None:
+                issues.append(ValidationIssue(model.name, "error", "no model path configured"))
+            elif not model.path.exists():
+                issues.append(ValidationIssue(
+                    model.name, "error",
+                    f"model directory does not exist: {model.path}",
+                ))
+            elif not (
+                (model.path / "config.json").exists()
+                or any(model.path.glob("*.safetensors"))
+                or any(model.path.glob("*.bin"))
+            ):
+                issues.append(ValidationIssue(
+                    model.name, "warning",
+                    f"model directory has no config.json or weight files: {model.path}",
+                ))
+
+        # 2. Capability tags
+        for cap in model.capabilities:
+            if cap not in self._VALID_CAPABILITIES:
+                issues.append(ValidationIssue(
+                    model.name, "warning",
+                    f"unknown capability '{cap}' "
+                    f"(valid: {', '.join(sorted(self._VALID_CAPABILITIES))})",
+                ))
+
+        # 3. max_tokens vs max_model_len (vLLM only)
+        if model.backend == "vllm" and model.max_tokens > model.max_model_len:
+            issues.append(ValidationIssue(
+                model.name, "warning",
+                f"max_tokens ({model.max_tokens}) > max_model_len ({model.max_model_len}); "
+                "generation may be silently capped by vLLM",
+            ))
+
+        # 4. gpu_memory_utilization range (vLLM only)
+        if model.backend == "vllm" and not (0.0 < model.gpu_memory_utilization <= 1.0):
+            issues.append(ValidationIssue(
+                model.name, "error",
+                f"gpu_memory_utilization {model.gpu_memory_utilization} is out of range (0.0, 1.0]",
+            ))
+
+        # 5. tensor_parallel_size (vLLM only)
+        if model.backend == "vllm" and model.tensor_parallel_size < 1:
+            issues.append(ValidationIssue(
+                model.name, "error",
+                f"tensor_parallel_size {model.tensor_parallel_size} must be ≥ 1",
+            ))
+
+        # 6. LoRA cross-references
+        for lora_name in model.compatible_loras:
+            if lora_name not in loras:
+                issues.append(ValidationIssue(
+                    model.name, "warning",
+                    f"compatible_loras lists '{lora_name}' which was not found on disk",
+                ))
+        for lora_name in model.pinned_loras:
+            if lora_name not in model.compatible_loras:
+                issues.append(ValidationIssue(
+                    model.name, "warning",
+                    f"pinned_loras lists '{lora_name}' which is not in compatible_loras",
+                ))
+
+        return issues
 
     def mark_ollama_unavailable(self) -> None:
         """Mark all ollama-backend models as unavailable (Ollama offline)."""
@@ -344,7 +450,7 @@ class ModelManager:
         str_fields = {"display_name", "dtype", "system_prompt", "ollama_model_name"}
         float_fields = {"gpu_memory_utilization", "temperature"}
         int_fields = {"max_model_len", "max_tokens", "tensor_parallel_size"}
-        list_str_fields = {"extra_vllm_args", "compatible_loras", "pinned_loras"}
+        list_str_fields = {"extra_vllm_args", "compatible_loras", "pinned_loras", "capabilities"}
 
         for f in str_fields:
             if f in entry and entry[f] is not None:

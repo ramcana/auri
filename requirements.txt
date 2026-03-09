@@ -17,3 +17,11 @@ python-dotenv>=1.0
 watchdog>=4.0
 aiohttp>=3.9
 httpx>=0.27
+
+# RAG dependencies
+sentence-transformers>=2.7
+chromadb>=0.5
+pypdf>=4.0           # PDF text extraction
+
+# Web search
+duckduckgo-search>=6.0

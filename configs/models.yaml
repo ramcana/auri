@@ -22,6 +22,7 @@ models:
     ollama_model_name: "qwen3:14b"
     display_name: "Qwen3 14B"
     max_tokens: 4096
+    capabilities: [chat, coding, tools]
     system_prompt: "You are Auri, a helpful assistant."
 
   mistral-nemo:
@@ -29,6 +30,7 @@ models:
     ollama_model_name: "mistral-nemo:latest"
     display_name: "Mistral Nemo"
     max_tokens: 4096
+    capabilities: [chat, coding]
     system_prompt: "You are Auri, a helpful assistant."
 
   qwen2-5-7b:
@@ -36,6 +38,7 @@ models:
     ollama_model_name: "qwen2.5:7b-instruct"
     display_name: "Qwen2.5 7B Instruct"
     max_tokens: 4096
+    capabilities: [chat]
     system_prompt: "You are Auri, a helpful assistant."
 
   deepseek-r1-8b:
@@ -43,6 +46,7 @@ models:
     ollama_model_name: "deepseek-r1:8b"
     display_name: "DeepSeek R1 8B"
     max_tokens: 4096
+    capabilities: [chat, coding]
     system_prompt: "You are Auri, a helpful assistant."
 
   # ── Example vLLM model ────────────────────────────────────────────────────

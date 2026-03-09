@@ -1,0 +1,25 @@
+# Runtime data — mounted as volumes, never baked into the image
+models/
+loras/
+workspaces/
+data/
+logs/
+
+# Development / environment
+.git/
+.env
+.env.*
+*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tests and docs
+tests/
+*.md
+PROGRESS.md
+
+# Temp files
+tmp/
+*.log
